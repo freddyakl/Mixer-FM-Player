@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -77,172 +79,291 @@ fun RadioDashboard(viewModel: RadioViewModel) {
             )
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            BackgroundDark,
-                            Color(0xFF0F0B13),
-                            BackgroundDark
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+        if (isLandscape) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                BackgroundDark,
+                                Color(0xFF0F0B13),
+                                BackgroundDark
+                            )
                         )
                     )
-                ),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // 1. DUAL ARTWORK & NOW PLAYING INTEGRATION WRAPPER
-            item {
-                Box(
+                    .padding(horizontal = 24.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 1. LEFT PANE - NOW PLAYING & ALBUM ART
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                        .clip(RoundedCornerShape(28.dp))
-                        .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(28.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.04f),
-                                    Color.White.copy(alpha = 0.01f)
-                                )
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
+                        .weight(0.48f)
+                        .fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .wrapContentHeight()
-                            .padding(top = 24.dp, bottom = 20.dp)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(24.dp))
+                            .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(24.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.04f),
+                                        Color.White.copy(alpha = 0.01f)
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // Interactive Vinyl Artwork Section (tapping here triggers play/pause)
-                        CoverArtSection(
-                            isPlaying = uiState.isPlaying,
-                            isBuffering = uiState.isBuffering,
-                            artworkUrl = uiState.artworkUrl,
-                            onClick = { viewModel.togglePlayPause() }
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Metadata display: trackTitle in <h2> format (fontSize = 24.sp)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp)
+                                .fillMaxSize()
+                                .padding(12.dp)
                         ) {
+                            // Cover Art scaled to fit the vertical space perfectly on TV
+                            CoverArtSection(
+                                isPlaying = uiState.isPlaying,
+                                isBuffering = uiState.isBuffering,
+                                artworkUrl = uiState.artworkUrl,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .fillMaxHeight(0.7f)
+                                    .aspectRatio(1f),
+                                onClick = { viewModel.togglePlayPause() }
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Metadata display: trackTitle
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp)
+                            ) {
+                                Text(
+                                    text = uiState.trackTitle,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier
+                                        .weight(1f, fill = false)
+                                        .basicMarquee()
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Icon(
+                                    imageVector = if (viewModel.isFavorite(uiState.trackTitle, uiState.trackArtist)) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = "Add song to bookmarks",
+                                    tint = if (viewModel.isFavorite(uiState.trackTitle, uiState.trackArtist)) RadioCyan else Color.White.copy(alpha = 0.4f),
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .clickable {
+                                            viewModel.toggleFavorites(uiState.trackTitle, uiState.trackArtist)
+                                        }
+                                        .testTag("bookmark_favorite_btn")
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(2.dp))
+
+                            // Artist name
                             Text(
-                                text = uiState.trackTitle,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 24.sp,
-                                color = Color.White,
+                                text = uiState.trackArtist,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp,
+                                color = RadioLightCyan,
                                 maxLines = 1,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier
-                                    .weight(1f, fill = false)
+                                    .padding(horizontal = 12.dp)
                                     .basicMarquee()
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = if (viewModel.isFavorite(uiState.trackTitle, uiState.trackArtist)) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = "Add song to bookmarks",
-                                tint = if (viewModel.isFavorite(uiState.trackTitle, uiState.trackArtist)) RadioCyan else Color.White.copy(alpha = 0.4f),
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clickable {
-                                        viewModel.toggleFavorites(uiState.trackTitle, uiState.trackArtist)
-                                    }
-                                    .testTag("bookmark_favorite_btn")
-                            )
                         }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        // Artist name in <h3> format (fontSize = 17.sp)
-                        Text(
-                            text = uiState.trackArtist,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 17.sp,
-                            color = RadioLightCyan,
-                            maxLines = 1,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .padding(horizontal = 24.dp)
-                                .basicMarquee()
-                        )
                     }
                 }
-            }
 
-            // 3. BOOKMARKED SONGS SECTION
-            if (uiState.favorites.isNotEmpty()) {
-                item {
+                // 2. RIGHT PANE - BOOKMARKS & RECENT TRACKS (SIDE BY SIDE ON WIDE TV)
+                Row(
+                    modifier = Modifier
+                        .weight(0.52f)
+                        .fillMaxHeight(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // BOOKMARKS COLUMN
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.02f))
+                            .border(1.dp, Color.White.copy(alpha = 0.03f), RoundedCornerShape(16.dp))
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
                             text = "BOOKMARKS",
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White.copy(alpha = 0.4f),
-                            letterSpacing = 1.5.sp,
+                            letterSpacing = 1.2.sp,
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
 
-                        uiState.favorites.toList().forEach { f ->
-                            val parts = f.split("|||", limit = 2)
-                            val fTitle = parts.getOrNull(0) ?: "Unknown Track"
-                            val fArtist = parts.getOrNull(1) ?: "Live Broadcast"
-
+                        if (uiState.favorites.isEmpty()) {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(Color.White.copy(alpha = 0.03f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.03f), RoundedCornerShape(16.dp))
-                                    .padding(vertical = 12.dp, horizontal = 16.dp)
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = fTitle,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            color = Color.White,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = fArtist,
-                                            fontWeight = FontWeight.Normal,
-                                            fontSize = 11.sp,
-                                            color = RadioLightCyan,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
+                                Text(
+                                    text = "No bookmarks yet.\nTap heart on the left\nto save songs.",
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.3f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        } else {
+                            val scrollState = rememberScrollState()
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(scrollState),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                uiState.favorites.toList().forEach { f ->
+                                    val parts = f.split("|||", limit = 2)
+                                    val fTitle = parts.getOrNull(0) ?: "Unknown Track"
+                                    val fArtist = parts.getOrNull(1) ?: "Live Broadcast"
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(Color.White.copy(alpha = 0.03f))
+                                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = fTitle,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = Color.White,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = fArtist,
+                                                fontWeight = FontWeight.Normal,
+                                                fontSize = 10.sp,
+                                                color = RadioLightCyan,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { viewModel.toggleFavorites(fTitle, fArtist) },
+                                            modifier = Modifier.size(20.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Clear,
+                                                contentDescription = "Remove bookmark",
+                                                tint = Color.White.copy(alpha = 0.3f),
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                        }
                                     }
-                                    IconButton(
-                                        onClick = { viewModel.toggleFavorites(fTitle, fArtist) },
-                                        modifier = Modifier.size(24.dp)
+                                }
+                            }
+                        }
+                    }
+
+                    // RECENT TRACKS COLUMN
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = 0.02f))
+                            .border(1.dp, Color.White.copy(alpha = 0.03f), RoundedCornerShape(16.dp))
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "RECENT TRACKS",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.4f),
+                            letterSpacing = 1.2.sp,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+
+                        if (uiState.songHistory.size <= 1) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Waiting for history...",
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.3f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        } else {
+                            val scrollState = rememberScrollState()
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(scrollState),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                uiState.songHistory.drop(1).take(5).forEach { historyItem ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp, horizontal = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.Clear,
-                                            contentDescription = "Remove bookmark",
-                                            tint = Color.White.copy(alpha = 0.3f),
-                                            modifier = Modifier.size(16.dp)
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = null,
+                                            tint = Color.White.copy(alpha = 0.2f),
+                                            modifier = Modifier.size(14.dp)
                                         )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = historyItem.title,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 12.sp,
+                                                color = Color.White.copy(alpha = 0.8f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = historyItem.artist,
+                                                fontWeight = FontWeight.Normal,
+                                                fontSize = 10.sp,
+                                                color = Color.White.copy(alpha = 0.4f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -250,55 +371,230 @@ fun RadioDashboard(viewModel: RadioViewModel) {
                     }
                 }
             }
-
-            // 4. PREVIOUS TRACK HISTORY
-            if (uiState.songHistory.size > 1) {
-                item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = "RECENT TRACKS",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White.copy(alpha = 0.4f),
-                            letterSpacing = 1.5.sp,
-                            modifier = Modifier.padding(horizontal = 4.dp)
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                BackgroundDark,
+                                Color(0xFF0F0B13),
+                                BackgroundDark
+                            )
                         )
+                    ),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 1. DUAL ARTWORK & NOW PLAYING INTEGRATION WRAPPER
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                            .clip(RoundedCornerShape(28.dp))
+                            .border(1.dp, Color.White.copy(alpha = 0.05f), RoundedCornerShape(28.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.04f),
+                                        Color.White.copy(alpha = 0.01f)
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight()
+                                .padding(top = 24.dp, bottom = 20.dp)
+                        ) {
+                            // Interactive Vinyl Artwork Section (tapping here triggers play/pause)
+                            CoverArtSection(
+                                isPlaying = uiState.isPlaying,
+                                isBuffering = uiState.isBuffering,
+                                artworkUrl = uiState.artworkUrl,
+                                onClick = { viewModel.togglePlayPause() }
+                            )
 
-                        // Skip index 0 as it is actively playing
-                        uiState.songHistory.drop(1).take(5).forEach { historyItem ->
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            // Metadata display: trackTitle in <h2> format (fontSize = 24.sp)
                             Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 6.dp, horizontal = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(horizontal = 24.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.2f),
-                                    modifier = Modifier.size(18.dp)
+                                Text(
+                                    text = uiState.trackTitle,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 24.sp,
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier
+                                        .weight(1f, fill = false)
+                                        .basicMarquee()
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = historyItem.title,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 13.sp,
-                                        color = Color.White.copy(alpha = 0.8f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(
+                                    imageVector = if (viewModel.isFavorite(uiState.trackTitle, uiState.trackArtist)) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = "Add song to bookmarks",
+                                    tint = if (viewModel.isFavorite(uiState.trackTitle, uiState.trackArtist)) RadioCyan else Color.White.copy(alpha = 0.4f),
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable {
+                                            viewModel.toggleFavorites(uiState.trackTitle, uiState.trackArtist)
+                                        }
+                                        .testTag("bookmark_favorite_btn")
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            // Artist name in <h3> format (fontSize = 17.sp)
+                            Text(
+                                text = uiState.trackArtist,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 17.sp,
+                                color = RadioLightCyan,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .padding(horizontal = 24.dp)
+                                    .basicMarquee()
+                            )
+                        }
+                    }
+                }
+
+                // 3. BOOKMARKED SONGS SECTION
+                if (uiState.favorites.isNotEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "BOOKMARKS",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White.copy(alpha = 0.4f),
+                                letterSpacing = 1.5.sp,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+
+                            uiState.favorites.toList().forEach { f ->
+                                val parts = f.split("|||", limit = 2)
+                                val fTitle = parts.getOrNull(0) ?: "Unknown Track"
+                                val fArtist = parts.getOrNull(1) ?: "Live Broadcast"
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(Color.White.copy(alpha = 0.03f))
+                                        .border(1.dp, Color.White.copy(alpha = 0.03f), RoundedCornerShape(16.dp))
+                                        .padding(vertical = 12.dp, horizontal = 16.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = fTitle,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = Color.White,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = fArtist,
+                                                fontWeight = FontWeight.Normal,
+                                                fontSize = 11.sp,
+                                                color = RadioLightCyan,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { viewModel.toggleFavorites(fTitle, fArtist) },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Clear,
+                                                contentDescription = "Remove bookmark",
+                                                tint = Color.White.copy(alpha = 0.3f),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. PREVIOUS TRACK HISTORY
+                if (uiState.songHistory.size > 1) {
+                    item {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "RECENT TRACKS",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White.copy(alpha = 0.4f),
+                                letterSpacing = 1.5.sp,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+
+                            // Skip index 0 as it is actively playing
+                            uiState.songHistory.drop(1).take(5).forEach { historyItem ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp, horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = null,
+                                        tint = Color.White.copy(alpha = 0.2f),
+                                        modifier = Modifier.size(18.dp)
                                     )
-                                    Text(
-                                        text = historyItem.artist,
-                                        fontWeight = FontWeight.Normal,
-                                        fontSize = 11.sp,
-                                        color = Color.White.copy(alpha = 0.4f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = historyItem.title,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 13.sp,
+                                            color = Color.White.copy(alpha = 0.8f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = historyItem.artist,
+                                            fontWeight = FontWeight.Normal,
+                                            fontSize = 11.sp,
+                                            color = Color.White.copy(alpha = 0.4f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -393,6 +689,7 @@ fun CoverArtSection(
     isPlaying: Boolean,
     isBuffering: Boolean,
     artworkUrl: String?,
+    modifier: Modifier = Modifier.fillMaxWidth(0.95f).aspectRatio(1f),
     onClick: () -> Unit
 ) {
     // Pulsing Backdrop Cyan Neon Glowing Aura
@@ -412,9 +709,7 @@ fun CoverArtSection(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth(0.95f)
-            .aspectRatio(1f)
+        modifier = modifier
             .padding(10.dp),
         contentAlignment = Alignment.Center
     ) {

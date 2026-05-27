@@ -245,7 +245,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                     val firstResult = results.getJSONObject(0)
                     var artworkUrl = firstResult.optString("artworkUrl100", null)
                     if (artworkUrl != null) {
-                        artworkUrl = artworkUrl.replace("100x100bb", "500x500bb")
+                        artworkUrl = artworkUrl.replace("100x100bb", "800x800bb")
                     }
                     withContext(Dispatchers.Main) {
                         _uiState.update { it.copy(artworkUrl = artworkUrl) }
@@ -266,7 +266,7 @@ class RadioViewModel(application: Application) : AndroidViewModel(application) {
                         val firstResult = fallbackResults.getJSONObject(0)
                         var artworkUrl = firstResult.optString("artworkUrl100", null)
                         if (artworkUrl != null) {
-                            artworkUrl = artworkUrl.replace("100x100bb", "500x500bb")
+                            artworkUrl = artworkUrl.replace("100x100bb", "800x800bb")
                         }
                         withContext(Dispatchers.Main) {
                             _uiState.update { it.copy(artworkUrl = artworkUrl) }
