@@ -2,7 +2,7 @@
 <img width="1200" height="475" alt="GHBanner" src="https://mixerfm.com/img/logo.png" />
 </div>
 
-# Run and deploy your AI Studio app
+# Run and deploy your Studio app
 
 This contains everything you need to run your app locally.
 
